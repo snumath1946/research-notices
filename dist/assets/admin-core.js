@@ -65,6 +65,23 @@
     if (!Array.isArray(value.notices) || !value.meta) throw new Error('공고 목록 형식이 올바르지 않습니다.');
     return value;
   }
+  async function waitForPublication({ notice, url, fetcher, active = () => true, wait = ms => new Promise(resolve => setTimeout(resolve, ms)), delays = [0, 1000, 2000, 5000, 10000, 15000, 20000] }) {
+    const signature = JSON.stringify(notice);
+    for (const delay of delays) {
+      if (!active()) return 'cancelled';
+      if (delay) await wait(delay);
+      if (!active()) return 'cancelled';
+      try {
+        const response = await fetcher(url, { cache: 'no-store', credentials: 'omit' });
+        if (!active()) return 'cancelled';
+        if (!response.ok) continue;
+        const catalog = parseCatalog(await response.text());
+        if (!active()) return 'cancelled';
+        if (JSON.stringify(catalog.notices.find(n => n.id === notice.id)) === signature) return 'published';
+      } catch { /* A delayed deployment or network error must not trigger another save. */ }
+    }
+    return 'pending';
+  }
   async function buildUpdateZip(JSZip, catalog, notice, pendingFiles) {
     const zip = new JSZip(), merged = mergeNotice(catalog, notice);
     zip.file('dist/data/notices.js', catalogScript(merged), { compression: 'DEFLATE' });
@@ -76,7 +93,7 @@
     zip.file('업데이트-적용안내.txt', '이 ZIP은 전체 사이트가 아니라 업데이트 파일입니다.\n대상: snumath1946/research-notices\n동일 경로에 파일을 추가·교체하고 기존 공고 및 파일은 보존하세요.\n다른 관리자의 변경이 있으면 최신 목록을 불러와 다시 내보내세요.\n원문 PDF 전체는 자동 포함되지 않습니다.\n');
     return zip.generateAsync({ type: 'blob', compression: 'STORE' });
   }
-  const api = { MAX_FILE, suggestRanges, textForRanges, validateRanges, validateUpload, filePath, validateDraft, mergeNotice, catalogScript, parseCatalog, buildUpdateZip };
+  const api = { MAX_FILE, suggestRanges, textForRanges, validateRanges, validateUpload, filePath, validateDraft, mergeNotice, catalogScript, parseCatalog, waitForPublication, buildUpdateZip };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ResearchNoticesAdminCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

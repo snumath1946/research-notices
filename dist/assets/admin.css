@@ -73,3 +73,18 @@ summary { cursor: pointer; min-height: 44px; font-size: .9375rem; font-weight: 5
 #body-text { font-family: ui-monospace, monospace; line-height: 1.8; }
 .body-preview .notice-text-content { padding: 22px; background: white; }
 .admin-main input[type="url"], .admin-main select { width: 100%; padding: 12px; border: 1px solid #bdcad9; border-radius: 8px; font: inherit; }
+
+.publishing-workspace { border-top: 3px solid var(--navy); scroll-margin-top: 24px; }
+.inline-connection { margin: 22px 0; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--canvas); }
+.connection-heading { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+#token-entry { margin-top: 16px; }
+.save-summary { display: grid; gap: 6px; margin: 20px 0; overflow-wrap: anywhere; }
+.save-summary span, .save-summary small { color: var(--secondary); font-size: .9rem; }
+.save-action { display: grid; gap: 8px; }
+.save-action > .button { width: 100%; min-height: 54px; }
+.save-action .panel-help { margin: 0; }
+.secondary-save { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
+.publish-jump { display: block; padding: 12px 4px; }
+.publish-result { background: #f0f7f2; border-radius: 8px; padding: 18px; }
+.publish-result h3 { color: var(--navy); font-size: 1.1rem; }
+#publish-error { margin-top: 16px; }
