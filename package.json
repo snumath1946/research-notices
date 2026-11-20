@@ -1,0 +1,11 @@
+{
+  "name": "snu-research-notices",
+  "version": "0.2.0",
+  "private": true,
+  "description": "연도별 연구과제 공모 안내 정적 사이트 초안",
+  "scripts": {
+    "test": "node tests/model.test.cjs && node tests/admin.test.cjs && node tests/export.test.cjs",
+    "verify": "node scripts/verify.cjs",
+    "preview": "node scripts/serve.cjs"
+  }
+}

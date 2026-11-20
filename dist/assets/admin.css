@@ -1,0 +1,65 @@
+.admin-main { padding-block: 40px 64px; }
+.admin-title { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.admin-title .eyebrow { margin-bottom: 8px; }
+.admin-title h1 { font-size: 2.25rem; font-weight: 500; }
+.admin-title p:last-child { color: var(--secondary); margin-top: 8px; }
+.admin-status { color: var(--navy); background: var(--navy-soft); border: 1px solid var(--line); padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; min-height: 60px; }
+.admin-shell { display: grid; grid-template-columns: 280px minmax(0,1fr); gap: 28px; align-items: start; }
+.admin-sidebar, .admin-editor { display: grid; gap: 24px; min-width: 0; }
+.admin-panel { border: 1px solid var(--line); border-radius: 12px; padding: 24px; background: white; min-width: 0; }
+.admin-panel h2 { font-size: 1.125rem; margin-bottom: 12px; }
+.panel-heading { display: flex; align-items: baseline; gap: 16px; justify-content: space-between; margin-bottom: 16px; }
+.panel-heading h2 { margin: 0; }
+.step-label, .panel-help { color: var(--secondary); font-size: .875rem; line-height: 1.8; }
+.panel-help { margin-block: 8px 16px; }
+.admin-notice-list { display: grid; gap: 8px; }
+.admin-notice-list button { width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 52px; }
+.admin-notice-list button:hover, .admin-notice-list button[aria-current="true"] { background: var(--navy-soft); border-color: #9baec4; }
+.admin-notice-list button span { display: block; color: var(--muted); font-size: .875rem; }
+.admin-panel label:not(.upload-zone):not(.check-label):not(.button) { display: block; font-size: .9375rem; margin-bottom: 8px; }
+.admin-panel input:not([type="checkbox"]):not([type="file"]), .admin-panel textarea { width: 100%; min-height: 48px; border: 1px solid var(--line); padding: 10px 12px; border-radius: 8px; background: white; }
+.admin-panel textarea { font: inherit; font-size: .9375rem; line-height: 1.8; resize: vertical; word-break: normal; }
+.admin-form-grid { display: grid; grid-template-columns: 140px minmax(0,1fr); gap: 20px; }
+.span-all { grid-column: 1 / -1; }
+.upload-zone { display: grid; gap: 12px; border: 1px dashed #9aabbe; background: var(--canvas); border-radius: 8px; padding: 24px; cursor: pointer; color: var(--secondary); font-size: .9375rem; }
+.upload-zone:hover { background: var(--navy-soft); }
+.upload-title { color: var(--navy); font-size: 1.0625rem; font-weight: 500; }
+.upload-zone input { width: 100%; font-size: .875rem; }
+.pdf-pages { display: grid; gap: 24px; }
+.pdf-page { border: 1px solid var(--line); padding: 16px; border-radius: 8px; }
+.pdf-page-head { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.pdf-page-head .check-label { margin-right: auto; }
+.range-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.range-controls label { display: flex !important; gap: 8px; align-items: center; margin: 0 !important; }
+.range-controls input { max-width: 88px; min-height: 44px !important; }
+.pdf-canvas-wrap { max-height: 420px; overflow: auto; background: var(--canvas); border: 1px solid var(--line); }
+.pdf-canvas-wrap canvas { display: block; width: 100%; height: auto; }
+.pdf-page-selected { color: var(--navy); font-size: .875rem; margin-block: 8px 0; }
+#build-body { margin-top: 24px; }
+.body-preview { display: grid; gap: 16px; background: var(--canvas); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+.body-preview img { display: block; width: 100%; height: auto; background: white; border: 1px solid var(--line); }
+.empty-draft { padding: 28px 16px; color: var(--muted); text-align: center; }
+.body-text-editor, .schedule-editor { margin-top: 24px; }
+summary { cursor: pointer; min-height: 44px; font-size: .9375rem; font-weight: 500; color: var(--navy); }
+.body-text-editor label { margin-top: 16px; }
+.check-label { display: flex; align-items: flex-start; gap: 12px; font-size: .9375rem; line-height: 1.8; }
+.check-label input { width: 20px; height: 20px; margin-top: 4px; flex-shrink: 0; accent-color: var(--navy); }
+.file-select { position: relative; cursor: pointer; margin-top: 8px; }
+.file-select input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.file-select:focus-within { outline: 3px solid var(--navy); outline-offset: 4px; }
+.admin-attachments li { display: flex; gap: 16px; justify-content: space-between; align-items: center; padding-block: 16px; border-bottom: 1px solid var(--line); }
+.admin-attachments p { font-size: .9375rem; }
+.admin-attachments .quiet { display: block; }
+.publish-panel { border-top: 3px solid var(--navy); }
+.publish-actions, .connection-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.connection-panel .text-link { font-size: .875rem; }
+.publish-confirm { padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--line); }
+.publish-confirm .check-label { margin-block: 20px; }
+.error-summary { padding: 16px 20px; border: 1px solid #bb706b; border-left: 4px solid var(--red); border-radius: 8px; color: #7b2824; background: #fff7f6; margin-bottom: 24px; }
+.schedule-row { border: 1px solid var(--line); padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+.schedule-row .schedule-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.schedule-row .button { margin-top: 12px; }
+.admin-main button:disabled { opacity: .55; }
+[hidden] { display: none !important; }
+@media (max-width: 1000px) { .admin-shell { grid-template-columns: 240px minmax(0,1fr); gap: 20px; } .admin-panel { padding: 20px; } }
+@media (max-width: 760px) { .admin-shell { grid-template-columns: 1fr; } .admin-sidebar { grid-template-columns: 1fr; } .admin-title { align-items: flex-start; } .admin-title h1 { font-size: 1.75rem; } .admin-title > .button { min-width: 100px; padding-inline: 12px; } .admin-main { padding-top: 28px; } .admin-form-grid { grid-template-columns: 1fr 1fr; gap: 16px; } .panel-heading { flex-wrap: wrap; gap: 8px; } .schedule-row .schedule-dates { grid-template-columns: 1fr; } .range-controls { gap: 8px; } }
