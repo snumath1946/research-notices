@@ -185,20 +185,30 @@ const data = /* CATALOG_JSON_START */
           "institutionEnd": "2026-12-09T13:00:00+09:00"
         }
       ],
-      "summary": "2027년도 기초연구사업 핵심연구 유형 C~A·도약형의 1차 신규과제 공모 안내입니다.",
+      "summary": "2027년도 핵심연구 공모 안내입니다.",
       "eligibility": null,
       "funding": null,
       "duration": null,
       "details": [],
       "sourceReference": "Cap 2026-11-20 09-44-50.jpg · 사용자 제공 본문 캡처",
-      "attachments": [],
+      "attachments": [
+        {
+          "label": "4. 2027년도 기초연구사업 1차 신규과제 공모 안내(핵심연구 유형C~A, 도약형).zip",
+          "filename": "4. 2027년도 기초연구사업 1차 신규과제 공모 안내(핵심연구 유형C~A, 도약형).zip",
+          "format": "ZIP",
+          "href": "files\u002f2027\u002f2027-core-r1\u002fattachments\u002f417de09c6fa0f10834b69a73.zip",
+          "available": true,
+          "size": 23442381
+        }
+      ],
       "bodyImages": [
         {
           "href": "files\u002f2027\u002f2027-core-r1\u002fbody-01.jpg",
           "alt": "핵심연구: 사업내용부터 문의처까지의 공문 본문"
         }
       ],
-      "bodyText": ""
+      "bodyText": "",
+      "updatedAt": "2026-11-20T05:44:37.135Z"
     }
   ]
 }
