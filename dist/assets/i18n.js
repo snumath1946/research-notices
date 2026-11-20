@@ -1,5 +1,6 @@
 (function (root) {
   'use strict';
+  const T = typeof module !== 'undefined' && module.exports ? require('./notice-text.js') : root.ResearchNoticesText;
   const phrases = {
     '본문 바로가기': 'Skip to content', '서울대학교 수리과학부': 'Department of Mathematical Sciences, SNU',
     '서울대학교': 'Seoul National University', '수리과학부 연구지원': 'Mathematical Sciences · Research Support',
@@ -77,12 +78,12 @@
     '주소를 확인하거나 공모 목록에서 다시 선택해 주세요.': 'Check the address or choose a notice from the funding calls list.'
   };
   const programs = {
-    '리더연구': 'Leader Research', '신진연구': 'Early-Career Research', '한우물파기': 'Deep-Focus Research',
-    '한우물파기 기초연구': 'Deep-Focus Basic Research', '핵심연구': 'Core Research',
+    '리더연구': 'Leader Grants', '신진연구': 'Young Scientist Grants', '한우물파기': 'Hanwoomul-Phagi Basic Research',
+    '한우물파기 기초연구': 'Hanwoomul-Phagi Basic Research', '핵심연구': 'Core Research Grants',
     '기초연구사업': 'Basic Research Program', '개인기초연구사업': 'Individual Basic Research Program',
     '한국연구재단': 'National Research Foundation of Korea', '서울대학교 산학협력단': 'SNU R&DB Foundation',
     '1차 신규과제': 'First round · New projects', '신규과제 공모': 'Call for new projects',
-    '유형 A': 'Type A', '유형 B': 'Type B', '유형 C': 'Type C', '유형 C~A': 'Types C–A', '도약형': 'Leap-Forward Type'
+    '유형 A': 'Type A', '유형 B': 'Type B', '유형 C': 'Type C', '유형 C~A': 'Types C–A', '도약형': 'Merit Research Program'
   };
   const knownTitles = ['리더연구', '신진연구', '한우물파기 기초연구', '핵심연구'];
   const programText = value => programs[value] || String(value || '').split(' · ').map(part => programs[part] || part).join(' · ');
@@ -109,11 +110,14 @@
   }
   function notice(source, lang) {
     if (lang !== 'en') return source;
-    const en = source.english || {}, known = knownTitles.includes(source.title), title = en.title || programText(source.title);
+    const en = source.english || {}, known = knownTitles.includes(source.title), official = T.officialMatch(source);
+    const reviewed = T.checkedSource(en.source, source), useDefault = !!official && !en.title && !en.summary;
+    const title = en.title || official?.title || programText(source.title);
     return { ...source, title, fullTitle: en.title || (known ? `${source.year} ${programText(source.program)} — ${programText(source.round)}: ${title}` : source.fullTitle || title),
-      program: programText(source.program), round: programText(source.round), agency: programText(source.agency), via: programText(source.via),
-      types: (source.types || []).map(programText),
-      summary: en.summary || (known ? `${source.year} call for ${title}. Check the application dates and the original Korean notice below.` : 'An English overview has not been added yet. Please refer to the original Korean notice.'),
+      program: official && (useDefault || reviewed) ? official.program : programText(source.program), round: programText(source.round), agency: programText(source.agency), via: programText(source.via),
+      types: official && (useDefault || reviewed) ? official.types : (source.types || []).map(programText),
+      summary: en.summary || official?.summary || (known ? `${source.year} call for ${title}. Check the application dates and the original Korean notice below.` : 'An English overview has not been added yet. Please refer to the original Korean notice.'),
+      englishSource: reviewed || (useDefault ? official.source : null),
       schedules: (source.schedules || []).map(s => ({ ...s, label: programText(s.label) })),
       englishAvailable: !!en.title || known, originalSearchText: [source.title, source.fullTitle, source.program, source.family, source.agency, ...(source.types || [])].join(' ') };
   }

@@ -69,3 +69,7 @@ summary { cursor: pointer; min-height: 44px; font-size: .9375rem; font-weight: 5
 .admin-attachments li > div { min-width: 0; overflow-wrap: anywhere; }
 .admin-attachments li > button { flex-shrink: 0; }
 @media (max-width: 480px) { .admin-attachments li { align-items: flex-start; flex-direction: column; } .attachment-apply > .button { width: 100%; } }
+
+#body-text { font-family: ui-monospace, monospace; line-height: 1.8; }
+.body-preview .notice-text-content { padding: 22px; background: white; }
+.admin-main input[type="url"], .admin-main select { width: 100%; padding: 12px; border: 1px solid #bdcad9; border-radius: 8px; font: inherit; }
