@@ -1,0 +1,2 @@
+# Keep vendored library bytes identical to their published checksums on every OS.
+dist/vendor/** -text

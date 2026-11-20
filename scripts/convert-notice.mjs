@@ -1,4 +1,5 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
@@ -54,4 +55,4 @@ async function main() {
   await writeFile(output, JSON.stringify(result, null, 2), { flag: 'wx' });
   console.log('본문 텍스트 JSON을 저장했습니다. 관리 화면에서 불러온 뒤 원문과 대조해 주세요.');
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(() => { console.error('변환에 실패했습니다. PDF 형식·본문 범위와 새 출력 파일 경로를 확인하거나 변환 도우미 화면을 이용해 주세요.'); process.exitCode = 1; });
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))) main().catch(() => { console.error('변환에 실패했습니다. PDF 형식·본문 범위와 새 출력 파일 경로를 확인하거나 변환 도우미 화면을 이용해 주세요.'); process.exitCode = 1; });

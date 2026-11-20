@@ -1,0 +1,42 @@
+name: Validate portable converter and admin
+
+on:
+  pull_request:
+    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.gitattributes', '.github/workflows/validate.yml']
+  push:
+    branches: [main]
+    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.gitattributes', '.github/workflows/validate.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci --omit=optional --ignore-scripts
+      - run: npm test
+      - run: npm run verify
+      - name: Check Windows launcher
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call start-converter.cmd --check
+      - name: Check Mac launcher
+        if: runner.os == 'macOS'
+        run: zsh start-converter.command --check
+      - name: Check portable launcher
+        if: runner.os == 'Linux'
+        run: node scripts/start-converter.mjs --check

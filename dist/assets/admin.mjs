@@ -5,24 +5,38 @@ const D = window.ResearchNoticesDrafts;
 const $ = id => document.getElementById(id);
 const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let catalog = structuredClone(window.ResearchNoticesData);
-let current = null, files = new Map(), imageUrls = [], client = null, expectedHead = null, prepared = null;
-let baseSignature = null, busy = false, hasChanges = false, exportUrl = null, publishRequested = false;
+let current = null, files = new Map(), imageUrls = [], client = null, expectedHead = null;
+let baseSignature = null, busy = false, hasChanges = false, pendingPublish = false, exportUrl = null, publicationGeneration = 0;
 const ui = { disabledButtons: [], focusAfterTask: null };
 function focusAfterTask(id) { ui.focusAfterTask = id; }
 function message(text) { $('status').textContent = text; }
-function error(err) { const box = $('error-summary'); box.textContent = err instanceof Error ? err.message : '처리에 실패했습니다. 입력과 파일을 확인해 주세요.'; box.hidden = false; box.focus(); }
-function clearError() { $('error-summary').hidden = true; }
+function error(err, id = 'error-summary') { const box = $(id); box.textContent = err instanceof Error ? err.message : '처리에 실패했습니다. 입력과 파일을 확인해 주세요.'; box.hidden = false; box.focus(); }
+function clearError() { $('error-summary').hidden = true; $('publish-error').hidden = true; }
 function clearExport() { $('update-download-link')?.remove(); if (exportUrl) URL.revokeObjectURL(exportUrl); exportUrl = null; }
-function markChanged() { hasChanges = true; prepared = null; clearExport(); $('publish-confirm').hidden = true; $('publish-result').hidden = true; $('body-reviewed').checked = false; $('attachment-save-state').textContent = '변경사항이 있습니다. 공개 사이트에 적용하려면 본문·첨부파일을 확인한 뒤 아래 적용 버튼을 눌러 주세요.'; }
-async function guarded(task) {
+function renderSaveSummary() {
+  const title = $('notice-title').value.trim() || '공고명을 입력하세요';
+  const added = (current?.attachments || []).filter(a => files.has(a.href)).length;
+  $('publish-summary').innerHTML = `<strong>${e(title)}</strong><span>${e($('notice-year').value)}년도 · 첨부 ${(current?.attachments || []).length}개${added ? ` (새 파일 ${added}개)` : ''} · ${$('body-text').value.trim() ? '텍스트 본문' : '기존 이미지 본문'}</span><small>저장 대상: snumath1946/research-notices</small>`;
+}
+function markChanged() {
+  hasChanges = true; pendingPublish = true; publicationGeneration++; clearExport(); clearError(); $('publish-result').hidden = true;
+  $('attachment-save-state').textContent = '변경사항이 준비되었습니다. 위 공고와 첨부파일을 확인하고 적용 버튼을 한 번 누르세요.';
+  renderSaveSummary(); updateConnectionControls();
+}
+async function guarded(task, errorId) {
   if (busy) return;
   busy = true; clearError();
   ui.disabledButtons = [...document.querySelectorAll('.admin-main button, .admin-main input, .admin-main textarea, .admin-main select')].filter(b => !b.disabled);
   ui.disabledButtons.forEach(b => { b.disabled = true; });
-  try { await task(); } catch (err) { error(err); }
+  try { await task(); } catch (err) { error(err, errorId); }
   finally { busy = false; ui.disabledButtons.forEach(b => { if (b.isConnected) b.disabled = false; }); updateConnectionControls(); if (ui.focusAfterTask) { $(ui.focusAfterTask).focus(); ui.focusAfterTask = null; } }
 }
-function updateConnectionControls() { $('prepare-publish').disabled = busy; $('apply-attachments').disabled = busy; $('disconnect-github').disabled = !client || busy; }
+function updateConnectionControls() {
+  $('publish-notice').disabled = busy || !pendingPublish;
+  $('publish-notice').textContent = busy ? '처리 중…' : client ? '공개 사이트에 적용' : '연결하고 공개 사이트에 적용';
+  $('token-entry').hidden = !!client; $('disconnect-github').hidden = !client; $('disconnect-github').disabled = busy;
+  $('connection-state').textContent = client ? 'GitHub 연결됨 · 이 창에서 유지' : 'GitHub 미연결 · 아래 토큰 입력';
+}
 function releaseUrls() { imageUrls.forEach(url => URL.revokeObjectURL(url)); imageUrls = []; }
 function blobUrl(blob) { const url = URL.createObjectURL(blob); imageUrls.push(url); return url; }
 function safeBodyHref(image) { return M.getAttachmentHref({ ...image, available: true }); }
@@ -82,10 +96,12 @@ function scheduleRow(value = {}) {
   row.addEventListener('input', () => { $('schedule-reviewed').checked = false; });
   $('schedule-list').append(row);
 }
-function openNotice(value, savedFiles = []) {
+function openNotice(value, savedFiles = [], draftBaseSignature) {
   clearExport();
   current = structuredClone(value); files = new Map(savedFiles.map(f => [f.path, f]));
-  baseSignature = JSON.stringify(catalog.notices.find(n => n.id === current.id) || null);
+  const baseline = catalog.notices.find(n => n.id === current.id) || null;
+  baseSignature = draftBaseSignature === undefined ? JSON.stringify(baseline) : draftBaseSignature;
+  pendingPublish = draftBaseSignature !== undefined || (baseline ? JSON.stringify(current) !== JSON.stringify(baseline) : !!(current.title || current.bodyText || current.bodyMarkdown || current.attachments?.length));
   $('notice-title').value = current.title || '';
   $('notice-full-title').value = current.fullTitle || '';
   $('notice-english-title').value = current.english?.title || '';
@@ -102,12 +118,11 @@ function openNotice(value, savedFiles = []) {
   $('import-message').textContent = ''; $('body-import').value = '';
   $('notice-year').value = current.year;
   $('body-text').value = current.bodyMarkdown || current.bodyText || '';
-  $('body-reviewed').checked = false;
-  $('schedule-reviewed').checked = current.contentStatus === 'verified';
+    $('schedule-reviewed').checked = current.contentStatus === 'verified';
   $('schedule-list').replaceChildren(); (current.schedules || []).forEach(scheduleRow);
-  $('attachment-files').value = ''; $('publish-confirm').hidden = true; $('publish-result').hidden = true; publishRequested = false;
-  $('attachment-save-state').textContent = '첨부파일 선택은 준비 단계입니다. 공개 사이트에 적용 버튼에서 저장할 내용을 확인하고 최종 적용해 주세요.';
-  prepared = null; hasChanges = false; clearError(); renderBody(); renderAttachments(); renderCatalog();
+  $('attachment-files').value = ''; $('publish-result').hidden = true; publicationGeneration++;
+  $('attachment-save-state').textContent = '변경사항을 입력하거나 첨부파일을 선택하세요.';
+  hasChanges = false; clearError(); renderBody(); renderAttachments(); renderCatalog(); renderSaveSummary(); updateConnectionControls();
   message(catalog.notices.some(n => n.id === current.id) ? `${current.title} 공고를 편집하고 있습니다. 저장 전까지 방문자 화면은 바뀌지 않습니다.` : '새 공고를 작성하고 있습니다.');
 }
 function newNotice() {
@@ -145,8 +160,8 @@ function collect(validate) {
     if (!notice.schedules.length || notice.schedules.some(s => !s.label || M.scheduleState(s, new Date()).key === 'unverified')) throw new Error('신청기간이 비어 있거나 순서가 올바르지 않습니다. 유형별 시작·마감 시각을 확인해 주세요.');
   }
   notice.contentStatus = $('schedule-reviewed').checked && notice.schedules.length ? 'verified' : 'body-reviewed';
-  if (validate) C.validateDraft({ ...notice, reviewed: $('body-reviewed').checked });
-  notice.updatedAt = new Date().toISOString();
+  if (validate) C.validateDraft({ ...notice, reviewed: true });
+  if (validate) notice.updatedAt = new Date().toISOString();
   return notice;
 }
 async function refreshDrafts() {
@@ -155,13 +170,13 @@ async function refreshDrafts() {
     $('draft-list').innerHTML = drafts.length ? drafts.sort((a,b) => b.savedAt.localeCompare(a.savedAt)).map(d => `<button type="button" data-draft="${e(d.id)}">${e(d.notice.title || '제목 없는 공고')}<span>${e(M.formatKst(d.savedAt))}</span></button>`).join('') : '<p class="quiet">임시보관한 공고가 없습니다</p>';
     $('draft-list').querySelectorAll('[data-draft]').forEach(button => button.addEventListener('click', () => guarded(async () => {
       if (hasChanges) await saveLocal(false);
-      const saved = await D.get(button.dataset.draft); openNotice(saved.notice, saved.files); message('이 브라우저에 임시보관한 공고를 불러왔습니다. GitHub 저장 전까지 방문자에게 보이지 않습니다.');
+      const saved = await D.get(button.dataset.draft); openNotice(saved.notice, saved.files, saved.baseSignature); message('이 브라우저에 임시보관한 공고를 불러왔습니다. GitHub 저장 전까지 방문자에게 보이지 않습니다.');
     })));
   } catch (err) { $('draft-list').textContent = err.message; }
 }
 async function saveLocal(announce = true) {
   const notice = collect(false);
-  await D.put({ id: notice.id, notice, files: [...files.values()], savedAt: new Date().toISOString() }); hasChanges = false;
+  await D.put({ id: notice.id, notice, files: [...files.values()], baseSignature, savedAt: new Date().toISOString() }); hasChanges = false; updateConnectionControls();
   await refreshDrafts(); if (announce) message('이 브라우저 임시보관함에 저장했습니다. 아직 사이트에 게시되지 않았습니다.');
 }
 async function getPendingFiles(notice) {
@@ -179,57 +194,54 @@ async function exportUpdate() {
   download(await C.buildUpdateZip(window.JSZip, catalog, notice, await getPendingFiles(notice)), `research-notice-update-${notice.id}.zip`);
   await saveLocal(false); message('업데이트 ZIP을 만들었습니다. 준비된 ZIP 다운로드를 눌러 저장하세요. 저장소에 반영하기 전까지 방문자 사이트는 바뀌지 않습니다.');
 }
-async function connect() {
+async function connectForSave() {
   const token = $('github-token').value.trim(); $('github-token').value = '';
+  if (!token) { focusAfterTask('github-token'); throw new Error('바로 위에 research-notices 저장용 Access token을 입력한 뒤 적용 버튼을 눌러 주세요.'); }
   const candidate = window.ResearchNoticesGitHub.createClient({ owner: 'snumath1946', repo: 'research-notices', token });
-  try {
-    await candidate.connect(); const remote = await candidate.load(); const next = C.parseCatalog(remote.script);
-    const remoteNotice = next.notices.find(n => n.id === current.id) || null;
-    if (baseSignature !== JSON.stringify(remoteNotice)) { catalog = next; expectedHead = null; renderCatalog(); throw new Error('편집 중인 공고의 원격 내용이 달라졌습니다. 현재 내용을 임시보관한 뒤 왼쪽의 최신 공고를 다시 선택해 주세요.'); }
-    client?.disconnect(); client = candidate; expectedHead = remote.head; catalog = next; renderCatalog();
-    $('connection-state').textContent = 'snumath1946/research-notices 연결됨'; message('GitHub 최신 목록을 불러왔습니다. 본문·첨부자료 검토 후 저장할 수 있습니다.');
-    if (publishRequested) { publishRequested = false; $('publish-panel').scrollIntoView({ block: 'center' }); focusAfterTask('body-reviewed'); message('GitHub에 연결했습니다. 준비한 본문·첨부파일은 유지됩니다. 확인란을 선택한 뒤 공개 사이트에 적용을 눌러 주세요.'); }
-  } catch (err) { candidate.disconnect(); throw err; }
+  try { await candidate.connect(); client?.disconnect(); client = candidate; }
+  catch (err) { candidate.disconnect(); focusAfterTask('github-token'); throw err; }
 }
-async function preparePublish() {
-  if (!client || !expectedHead) {
-    publishRequested = true; $('github-connection').open = true; $('github-connection').scrollIntoView({ block: 'center' }); focusAfterTask('github-token');
-    message('공개 사이트에 적용하려면 GitHub 저장 연결이 필요합니다. 첨부파일은 이 화면에 그대로 있습니다. 연결한 뒤 본문·첨부파일을 확인하고 다시 적용해 주세요.'); return;
+async function monitorPublication(notice, sha, generation) {
+  if (typeof window.fetch !== 'function') return;
+  const active = () => publicationGeneration === generation;
+  const url = new URL('data/notices.js', window.location.href); url.searchParams.set('published', sha);
+  const state = await C.waitForPublication({ notice, url: url.href, fetcher: window.fetch.bind(window), active });
+  if (!active()) return;
+  if (state === 'published') {
+    $('publish-result-heading').textContent = '공개 사이트 반영 완료';
+    $('deployment-state').textContent = '저장한 본문과 첨부파일이 공개 사이트에 반영된 것을 확인했습니다.';
+    $('attachment-save-state').textContent = '공개 사이트 반영 완료';
+  } else {
+    $('deployment-state').textContent = 'GitHub 저장은 완료됐습니다. 공개 반영 확인에 시간이 더 필요합니다. 다시 저장하지 말고 배포 상태를 확인해 주세요.';
   }
-  if (!$('body-reviewed').checked) { $('publish-panel').scrollIntoView({ block: 'center' }); focusAfterTask('body-reviewed'); throw new Error('선택된 본문과 첨부파일을 확인했다는 확인란을 선택한 뒤 다시 적용해 주세요.'); }
-  const notice = collect(true);
-  const remote = await client.load();
-  if (remote.head !== expectedHead) throw new Error('다른 변경이 있습니다. 임시보관 후 GitHub 최신 목록을 다시 불러와 주세요.');
-  const merged = C.mergeNotice(C.parseCatalog(remote.script), notice), pendingFiles = await getPendingFiles(notice);
-  prepared = { notice, data: merged, files: pendingFiles, expectedHead };
-  $('publish-summary').innerHTML = `<p><strong>${e(notice.title)}</strong> · ${notice.year}년도</p><p class="panel-help">본문 ${notice.bodyMarkdown ? '텍스트' : '기존 이미지 ' + notice.bodyImages.length + '개'} · 첨부 ${notice.attachments.length}개 · 이번 전송 파일 ${pendingFiles.length}개<br>기존 공고를 포함해 총 ${merged.notices.length}건을 보존합니다. 원본 PDF는 별도 첨부로 선택한 경우에만 포함됩니다.</p>`;
-  $('publish-approved').checked = false; $('publish-confirm').hidden = false; $('publish-confirm').scrollIntoView({ block: 'center' });
 }
 async function publish() {
-  if (!prepared || !$('publish-approved').checked) throw new Error('저장할 내용과 공개 범위를 확인한 후 확인란을 선택해 주세요.');
-  const submission = prepared;
-  const result = await client.save({ expectedHead: submission.expectedHead, data: submission.data, files: submission.files, message: `공모 안내 업데이트: ${submission.notice.year} ${submission.notice.title}` });
-  catalog = submission.data; expectedHead = result.sha; current = submission.notice; baseSignature = JSON.stringify(current); prepared = null; hasChanges = false;
-  $('publish-confirm').hidden = true; renderCatalog();
-  try { await saveLocal(false); } catch { message('GitHub 저장은 완료됐지만 이 브라우저 임시보관은 실패했습니다. 아래 배포 상태를 확인해 주세요.'); }
-  files.clear(); renderAttachments(); $('publish-result').hidden = false;
-  $('attachment-save-state').textContent = 'GitHub에 본문·첨부파일을 저장했습니다. 공개 사이트 반영은 자동 배포가 성공한 뒤 완료됩니다.';
-  message('GitHub 저장 완료 · 공개 사이트 자동 배포를 기다리고 있습니다. 배포 상태 확인에서 성공 여부를 확인한 뒤 공개 사이트를 열어 주세요.');
-  const link = document.createElement('a'); link.href = result.url; link.className = 'text-link'; link.textContent = ' 저장 내역 보기'; link.target = '_blank'; link.rel = 'noopener noreferrer'; $('status').append(link);
+  const notice = collect(true);
+  if (!client) await connectForSave();
+  const remote = await client.load(), latest = C.parseCatalog(remote.script);
+  const latestNotice = latest.notices.find(n => n.id === current.id) || null;
+  if (baseSignature !== JSON.stringify(latestNotice)) { catalog = latest; renderCatalog(); throw new Error('이 공고가 다른 창이나 PC에서 변경되었습니다. 준비한 파일은 유지됩니다. 임시보관 후 왼쪽의 최신 공고를 선택해 변경 내용을 대조해 주세요.'); }
+  const merged = C.mergeNotice(latest, notice), pendingFiles = await getPendingFiles(notice);
+  const result = await client.save({ expectedHead: remote.head, data: merged, files: pendingFiles, message: `공모 안내 업데이트: ${notice.year} ${notice.title}` });
+  catalog = merged; expectedHead = result.sha; current = notice; baseSignature = JSON.stringify(current); hasChanges = false; pendingPublish = false;
+  renderCatalog();
+  try { await saveLocal(false); } catch { /* A completed GitHub save must not be retried because local drafts failed. */ }
+  files.clear(); renderAttachments(); renderSaveSummary(); $('publish-result').hidden = false;
+  $('publish-result-heading').textContent = 'GitHub 저장 완료 · 공개 반영 확인 중';
+  $('deployment-state').textContent = '저장한 내용이 공개 사이트에 보이는지 자동으로 확인하고 있습니다. 창을 닫아도 GitHub의 배포는 계속됩니다.';
+  const link = new URL('index.html', window.location.href); link.searchParams.set('updated', result.sha); link.hash = '/notice/' + encodeURIComponent(notice.id); $('public-notice-link').href = link.href;
+  $('attachment-save-state').textContent = 'GitHub 저장 완료 · 공개 반영 확인 중'; message('GitHub에 본문과 첨부파일을 저장했습니다. 공개 반영 상태는 같은 저장 영역에서 확인할 수 있습니다.');
+  const generation = ++publicationGeneration; void monitorPublication(notice, result.sha, generation);
 }
 $('body-import').addEventListener('change', () => guarded(importBody));
 $('english-body-import').addEventListener('change', () => guarded(importEnglishBody));
 $('match-nrf').addEventListener('click', findNrf);
-$('body-reviewed').addEventListener('change', () => { prepared = null; $('publish-confirm').hidden = true; });
 $('add-schedule').addEventListener('click', () => { scheduleRow(); markChanged(); });
 $('new-notice').addEventListener('click', () => guarded(async () => { if (hasChanges) await saveLocal(false); newNotice(); }));
 $('save-draft').addEventListener('click', () => guarded(() => saveLocal()));
 $('export-update').addEventListener('click', () => guarded(exportUpdate));
-$('connect-github').addEventListener('click', () => guarded(connect));
-$('disconnect-github').addEventListener('click', () => { client?.disconnect(); client = null; expectedHead = null; prepared = null; $('github-token').value = ''; $('publish-confirm').hidden = true; $('connection-state').textContent = '연결되지 않음'; updateConnectionControls(); message('GitHub 연결을 해제했습니다.'); });
-$('prepare-publish').addEventListener('click', () => guarded(preparePublish));
-$('apply-attachments').addEventListener('click', () => guarded(preparePublish));
-$('confirm-publish').addEventListener('click', () => guarded(publish));
+$('disconnect-github').addEventListener('click', () => { client?.disconnect(); client = null; expectedHead = null; $('github-token').value = ''; updateConnectionControls(); message('GitHub 연결을 해제했습니다. 준비한 본문과 첨부파일은 유지됩니다.'); });
+$('publish-notice').addEventListener('click', () => guarded(publish, 'publish-error'));
 $('attachment-files').addEventListener('change', () => guarded(async () => {
   const selected = [...$('attachment-files').files]; selected.forEach(C.validateUpload);
   for (const file of selected) {
@@ -239,7 +251,7 @@ $('attachment-files').addEventListener('change', () => guarded(async () => {
     if (!current.attachments.some(a => a.href === path)) current.attachments.push({ label: file.name, filename: file.name, format: file.name.split('.').pop().toUpperCase(), href: path, available: true, size: file.size });
     files.set(path, { path, blob: file });
   }
-  $('attachment-files').value = ''; markChanged(); renderAttachments(); message(`${selected.length}개 첨부파일을 준비했습니다. 아직 공개되지 않았습니다. 파일 목록과 본문을 확인한 뒤 공개 사이트에 적용을 눌러 주세요.`);
+  $('attachment-files').value = ''; markChanged(); renderAttachments(); message(`${selected.length}개 첨부파일을 준비했습니다. 같은 영역에서 토큰을 입력하고 적용 버튼을 한 번 누르면 저장합니다.`);
 }));
 for (const id of ['notice-year','notice-call-round','notice-family','notice-title','notice-full-title','body-text','schedule-list','schedule-reviewed','notice-english-title','notice-english-summary','notice-english-official-body','notice-english-body','english-source-url','english-source-title','english-source-reviewed']) $(id).addEventListener('input', markChanged);
 for (const id of ['notice-year','notice-call-round','notice-family','notice-title','notice-english-title','notice-english-summary','notice-english-official-body','english-source-url','english-source-title']) $(id).addEventListener('input', clearSourceReview);
