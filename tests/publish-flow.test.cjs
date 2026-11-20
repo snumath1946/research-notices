@@ -94,3 +94,15 @@ test('저장 실패나 원격 충돌은 성공으로 표시하지 않고 첨부�
     assert.match(ui.get('attachment-list').innerHTML, /sample.txt/);
   }
 });
+
+test('영문 공고명과 안내를 원문·첨부와 함께 저장한다', async () => {
+  const ui = await editor(); await ui.upload(); await ui.connect();
+  ui.get('notice-english-title').value = 'Synthetic research call';
+  ui.get('notice-english-summary').value = 'Synthetic English overview';
+  ui.get('notice-english-body').value = 'Synthetic application guidance';
+  ui.get('body-reviewed').checked = true; await ui.get('apply-attachments').emit('click');
+  ui.get('publish-approved').checked = true; await ui.get('confirm-publish').emit('click');
+  assert.equal(ui.writes.length, 1); const saved = ui.writes[0].data.notices[0];
+  assert.equal(saved.title, '합성 공고'); assert.equal(saved.english.title, 'Synthetic research call');
+  assert.equal(saved.english.bodyText, 'Synthetic application guidance'); assert.equal(saved.attachments.length, 1);
+});
