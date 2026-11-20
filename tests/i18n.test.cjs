@@ -13,15 +13,15 @@ test('언어 전환 링크는 공고 경로·검색 조건·기타 쿼리를 보
 });
 test('영문 화면은 원본 데이터·첨부 경로·날짜를 바꾸지 않는다', () => {
   const snapshot = structuredClone(original); const en = I.notice(original, 'en');
-  assert.equal(en.title, 'Early-Career Research'); assert.equal(en.program, 'Individual Basic Research Program');
+  assert.equal(en.title, 'Young Scientist Grants'); assert.equal(en.program, 'Individual Research Grants');
   assert.deepEqual(en.types, ['Type B','Type A']); assert.equal(en.schedules[0].researcherEnd, original.schedules[0].researcherEnd);
   assert.deepEqual(en.attachments, original.attachments); assert.equal(en.bodyText, original.bodyText); assert.deepEqual(original, snapshot);
   assert.equal(I.notice(original, 'ko'), original);
 });
 test('영문 검색과 한국어 검색을 같은 공고에 적용하며 유형 필터도 유지한다', () => {
   const records = [I.notice(original, 'en')], en = I.model(M, 'en');
-  for (const query of ['Early Career', 'Type B', '신진 연구']) assert.equal(en.filterNotices(records, { query }, date).length, 1);
-  assert.equal(en.filterNotices(records, { query: 'Early', family: '신진연구', status: 'upcoming' }, date).length, 1);
+  for (const query of ['Young Scientist', 'Type B', '신진 연구']) assert.equal(en.filterNotices(records, { query }, date).length, 1);
+  assert.equal(en.filterNotices(records, { query: 'Young', family: '신진연구', status: 'upcoming' }, date).length, 1);
   assert.equal(en.filterNotices(records, { family: '핵심연구' }, date).length, 0);
 });
 test('등록자가 입력한 영문을 우선하고 미번역 공고는 원문 안내로 표시한다', () => {
