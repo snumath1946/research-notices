@@ -18,7 +18,7 @@ for (const match of (html + adminHtml).matchAll(/(?:src|href)="([^"#]+)"/g)) {
   if (!resource) continue;
   check(fs.existsSync(path.join(root, resource)), '없는 정적 파일: ' + match[1]);
 }
-for (const file of ['assets/model.js', 'assets/i18n.js', 'assets/app.js', 'assets/admin-core.js', 'assets/github-store.js', 'assets/draft-store.js', 'data/notices.js']) {
+for (const file of ['assets/model.js', 'assets/notice-text.js', 'assets/i18n.js', 'assets/app.js', 'assets/admin-core.js', 'assets/github-store.js', 'assets/draft-store.js', 'data/notices.js']) {
   new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
   checks++;
 }

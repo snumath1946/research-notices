@@ -1,11 +1,12 @@
 const C = window.ResearchNoticesAdminCore;
+const T = window.ResearchNoticesText;
 const M = window.ResearchNoticesModel;
 const D = window.ResearchNoticesDrafts;
 const $ = id => document.getElementById(id);
 const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let catalog = structuredClone(window.ResearchNoticesData);
-let current = null, pages = [], pdfDocument = null, files = new Map(), imageUrls = [], client = null, expectedHead = null, prepared = null;
-let baseSignature = null, busy = false, hasChanges = false, processingGeneration = 0, rangesDirty = false, exportUrl = null, publishRequested = false;
+let current = null, files = new Map(), imageUrls = [], client = null, expectedHead = null, prepared = null;
+let baseSignature = null, busy = false, hasChanges = false, exportUrl = null, publishRequested = false;
 const ui = { disabledButtons: [], focusAfterTask: null };
 function focusAfterTask(id) { ui.focusAfterTask = id; }
 function message(text) { $('status').textContent = text; }
@@ -27,11 +28,41 @@ function blobUrl(blob) { const url = URL.createObjectURL(blob); imageUrls.push(u
 function safeBodyHref(image) { return M.getAttachmentHref({ ...image, available: true }); }
 function renderBody() {
   releaseUrls();
-  $('body-preview').innerHTML = current?.bodyImages?.length ? current.bodyImages.map((image, index) => {
-    const blob = files.get(image.href)?.blob;
-    const href = blob ? blobUrl(blob) : safeBodyHref(image);
-    return href ? `<img src="${e(href)}" alt="${e(image.alt || `${current.title} 공문 본문 ${index + 1}`)}"${image.width && image.height ? ` width="${image.width}" height="${image.height}"` : ''}>` : '';
-  }).join('') : '<p class="empty-draft">공문 PDF를 올리고 표시할 본문 범위를 선택해 주세요</p>';
+  const markdown = $('body-text').value;
+  if (markdown.trim()) { $('body-preview').innerHTML = `<div class="notice-text-content">${T.render(markdown)}</div>`; return; }
+  $('body-preview').innerHTML = current?.bodyImages?.length ? '<p class="panel-help">기존 이미지 본문입니다. 원본 PDF를 변환해 불러오면 텍스트로 전환됩니다.</p>' + current.bodyImages.map(image => {
+    const blob = files.get(image.href)?.blob, href = blob ? blobUrl(blob) : safeBodyHref(image);
+    return href ? `<img src="${e(href)}" alt="기존 공문 본문">` : '';
+  }).join('') : '<p class="empty-draft">게시할 본문 텍스트를 불러오거나 입력해 주세요</p>';
+}
+function clearSourceReview() { $('english-source-reviewed').checked = false; }
+function findNrf() {
+  const candidate = T.officialMatch({ year: Number($('notice-year').value), family: $('notice-family').value, callRound: Number($('notice-call-round').value) || null, round: '' });
+  if (!candidate) { $('nrf-match-message').textContent = '이 사업연도·차수·유형으로 확인된 영문 공고가 없습니다. 재단 영문 게시판에서 직접 대조하고 출처를 입력하세요. 비슷한 제목의 다른 연도 공고는 자동 연결하지 않습니다.'; return; }
+  if (!$('notice-english-title').value.trim()) $('notice-english-title').value = candidate.title;
+  if (!$('notice-english-summary').value.trim()) $('notice-english-summary').value = candidate.summary;
+  $('english-source-url').value = candidate.source.url; $('english-source-title').value = candidate.source.title;
+  markChanged(); clearSourceReview();
+  $('nrf-match-message').textContent = `${candidate.source.year}년도 ${candidate.source.callRound}차 · ${candidate.title} / ${candidate.types.join(' · ')} 후보를 찾았습니다. 기존 영문 입력은 보존했습니다. 재단 원문과 대조한 뒤 확인란을 선택해 주세요.`;
+}
+async function importBody() {
+  const file = $('body-import').files[0]; if (!file) return;
+  if (!/\.(json|md|txt)$/i.test(file.name) || file.size > 2 * 1024 * 1024) throw new Error('2MB 이하 JSON·MD·TXT 파일을 선택해 주세요.');
+  const raw = await file.text(); let markdown;
+  if (/\.json$/i.test(file.name)) { const parsed = T.parseImport(JSON.parse(raw)); markdown = parsed.bodyMarkdown; current.extraction = parsed.extraction; $('import-message').textContent = `kordoc ${parsed.extraction.version}로 변환한 본문입니다. ${parsed.warnings.join(' ')}`; }
+  else { if (!raw.trim() || raw.length > T.MAX_TEXT) throw new Error('본문이 비어 있거나 너무 큽니다.'); markdown = raw; current.extraction = { engine: 'manual-text' }; $('import-message').textContent = '본문 텍스트를 불러왔습니다. 표·날짜·본문 범위를 원문과 대조해 주세요.'; }
+  $('body-text').value = markdown; current.bodyImages = []; current.sourceReference = '관리자가 검토한 본문 텍스트';
+  markChanged(); renderBody(); $('body-import').value = ''; message('본문 텍스트를 불러왔습니다. 검토 후 공개 사이트에 적용해 주세요.');
+}
+async function importEnglishBody() {
+  const file = $('english-body-import').files[0]; if (!file) return;
+  if (!/\.(json|md|txt)$/i.test(file.name) || file.size > 2 * 1024 * 1024) throw new Error('2MB 이하 JSON·MD·TXT 파일을 선택해 주세요.');
+  const raw = await file.text(), parsed = /\.json$/i.test(file.name) ? T.parseImport(JSON.parse(raw)) : { bodyMarkdown: raw };
+  if (!parsed.bodyMarkdown.trim() || parsed.bodyMarkdown.length > T.MAX_TEXT) throw new Error('영문 본문이 비어 있거나 너무 큽니다.');
+  $('notice-english-official-body').value = parsed.bodyMarkdown;
+  current.english = { ...current.english, extraction: parsed.extraction || { engine: 'manual-text' } };
+  clearSourceReview(); markChanged(); $('english-body-import').value = '';
+  message('재단 영문 문서에서 선택한 텍스트를 불러왔습니다. 출처와 사업연도·차수·유형을 대조해 주세요.');
 }
 function renderCatalog() {
   $('catalog-count').textContent = catalog.notices.length + '건';
@@ -53,29 +84,35 @@ function scheduleRow(value = {}) {
 }
 function openNotice(value, savedFiles = []) {
   clearExport();
-  processingGeneration++;
-  current = structuredClone(value); files = new Map(savedFiles.map(f => [f.path, f])); pages = [];
+  current = structuredClone(value); files = new Map(savedFiles.map(f => [f.path, f]));
   baseSignature = JSON.stringify(catalog.notices.find(n => n.id === current.id) || null);
   $('notice-title').value = current.title || '';
   $('notice-full-title').value = current.fullTitle || '';
   $('notice-english-title').value = current.english?.title || '';
   $('notice-english-summary').value = current.english?.summary || '';
   $('notice-english-body').value = current.english?.bodyText || '';
+  $('notice-english-official-body').value = current.english?.officialBodyMarkdown || '';
+  $('english-body-import').value = '';
   $('notice-family').value = current.family || '';
+  $('notice-call-round').value = String(T.callRound(current) || '');
+  $('english-source-url').value = current.english?.source?.url || '';
+  $('english-source-title').value = current.english?.source?.title || '';
+  $('english-source-reviewed').checked = !!T.checkedSource(current.english?.source, current);
+  $('nrf-match-message').textContent = '';
+  $('import-message').textContent = ''; $('body-import').value = '';
   $('notice-year').value = current.year;
-  $('body-text').value = current.bodyText || '';
+  $('body-text').value = current.bodyMarkdown || current.bodyText || '';
   $('body-reviewed').checked = false;
   $('schedule-reviewed').checked = current.contentStatus === 'verified';
   $('schedule-list').replaceChildren(); (current.schedules || []).forEach(scheduleRow);
-  $('pdf-pages').replaceChildren(); $('pdf-file').value = ''; $('pdf-message').textContent = ''; $('build-body').hidden = true;
   $('attachment-files').value = ''; $('publish-confirm').hidden = true; $('publish-result').hidden = true; publishRequested = false;
   $('attachment-save-state').textContent = '첨부파일 선택은 준비 단계입니다. 공개 사이트에 적용 버튼에서 저장할 내용을 확인하고 최종 적용해 주세요.';
-  prepared = null; hasChanges = false; rangesDirty = false; clearError(); renderBody(); renderAttachments(); renderCatalog();
+  prepared = null; hasChanges = false; clearError(); renderBody(); renderAttachments(); renderCatalog();
   message(catalog.notices.some(n => n.id === current.id) ? `${current.title} 공고를 편집하고 있습니다. 저장 전까지 방문자 화면은 바뀌지 않습니다.` : '새 공고를 작성하고 있습니다.');
 }
 function newNotice() {
   const year = Math.max(new Date().getFullYear(), ...catalog.notices.map(n => n.year));
-  openNotice({ id: `notice-${crypto.randomUUID()}`, year, order: catalog.notices.length + 1, family: '', title: '', fullTitle: '', program: '기초연구사업', round: '신규과제 공모', agency: '한국연구재단', via: '서울대학교 산학협력단', types: [], contentStatus: 'body-reviewed', postedAt: null, schedules: [], summary: '', eligibility: null, funding: null, duration: null, details: [], attachments: [], bodyImages: [], bodyText: '', sourceReference: null });
+  openNotice({ id: `notice-${crypto.randomUUID()}`, year, order: catalog.notices.length + 1, family: '', title: '', fullTitle: '', program: '기초연구사업', round: '1차 신규과제', callRound: 1, agency: '한국연구재단', via: '서울대학교 산학협력단', types: [], contentStatus: 'body-reviewed', postedAt: null, schedules: [], summary: '', eligibility: null, funding: null, duration: null, details: [], attachments: [], bodyImages: [], bodyText: '', sourceReference: null });
 }
 function renderAttachments() {
   $('attachment-list').innerHTML = current.attachments?.length ? current.attachments.map((file, i) => `<li><div><p>${e(file.filename)}</p><span class="quiet">${e(file.format)} · ${files.has(file.href) ? '이번에 추가한 파일' : file.available ? '기존 등록 파일' : '아직 연결되지 않은 파일'}</span></div><button class="button button-outline button-small" type="button" data-exclude="${i}">목록에서 제외<span class="sr-only"> ${e(file.filename)}</span></button></li>`).join('') : '<li class="quiet">아직 등록된 첨부파일이 없습니다</li>';
@@ -83,92 +120,21 @@ function renderAttachments() {
     const at = Number(button.dataset.exclude); const [removed] = current.attachments.splice(at, 1); files.delete(removed.href); markChanged(); renderAttachments();
   }));
 }
-function linesFromText(content, viewport, util) {
-  const rows = [];
-  const items = content.items.filter(item => typeof item.str === 'string' && item.str.trim()).map(item => {
-    const transform = util.transform(viewport.transform, item.transform);
-    return { text: item.str, x: transform[4], y: Math.max(0, transform[5] - Math.abs(transform[3])), height: Math.abs(transform[3]) };
-  }).sort((a,b) => a.y - b.y || a.x - b.x);
-  for (const item of items) {
-    const row = rows.find(r => Math.abs(r.y - item.y) < Math.max(3, item.height * .25));
-    if (row) row.items.push(item); else rows.push({ y: item.y, items: [item] });
-  }
-  return rows.sort((a,b) => a.y - b.y).map(row => ({ y: row.y, text: row.items.sort((a,b) => a.x - b.x).map(i => i.text).join(' ') }));
-}
-async function readPdf(file) {
-  if (!file || !/\.pdf$/i.test(file.name) || file.size > C.MAX_FILE || !file.size) throw new Error('25MB 이하의 PDF 공문을 선택해 주세요.');
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!new TextDecoder().decode(bytes.slice(0, 1024)).includes('%PDF-')) throw new Error('PDF 형식이 올바르지 않습니다.');
-  const generation = ++processingGeneration;
-  rangesDirty = true;
-  message('PDF를 읽고 있습니다. 원본은 외부로 전송하지 않습니다.');
-  const pdfjs = await import('../vendor/pdfjs/pdf.mjs');
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.mjs', import.meta.url).href;
-  await pdfDocument?.destroy();
-  const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false, enableXfa: false, cMapUrl: new URL('../vendor/pdfjs/cmaps/', import.meta.url).href, cMapPacked: true, standardFontDataUrl: new URL('../vendor/pdfjs/standard_fonts/', import.meta.url).href, wasmUrl: new URL('../vendor/pdfjs/wasm/', import.meta.url).href });
-  task.onPassword = () => { task.destroy(); };
-  pdfDocument = await task.promise;
-  if (pdfDocument.numPages > 20) { await pdfDocument.destroy(); pdfDocument = null; throw new Error('20쪽 이하 공문을 올려 주세요. 신청요강은 별도 첨부파일로 등록할 수 있습니다.'); }
-  pages = []; $('pdf-pages').replaceChildren();
-  let pixelCount = 0;
-  for (let num = 1; num <= pdfDocument.numPages; num++) {
-    if (generation !== processingGeneration) return;
-    message(`PDF ${num}/${pdfDocument.numPages}쪽을 읽고 있습니다.`);
-    const page = await pdfDocument.getPage(num), base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: Math.min(2, 1500 / base.width) });
-    pixelCount += viewport.width * viewport.height;
-    if (viewport.height > 10000 || pixelCount > 60000000) throw new Error('공문의 이미지 크기가 큽니다. PDF 페이지를 나누어 등록해 주세요.');
-    const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    const content = await page.getTextContent();
-    pages.push({ page: num, width: canvas.width, height: canvas.height, canvas, lines: linesFromText(content, viewport, pdfjs.Util) });
-  }
-  const suggestion = C.suggestRanges(pages);
-  for (const page of pages) {
-    const range = suggestion.ranges.find(r => r.page === page.page);
-    const element = document.createElement('section'); element.className = 'pdf-page'; element.dataset.page = page.page;
-    element.innerHTML = `<div class="pdf-page-head"><label class="check-label"><input type="checkbox" data-include${range ? ' checked' : ''}>${page.page}쪽 표시</label><div class="range-controls"><label>위쪽 % <input data-top type="number" min="0" max="99" step="0.1" value="${range ? range.top.toFixed(1) : 0}" aria-label="${page.page}쪽 위쪽 범위 퍼센트"></label><label>아래쪽 % <input data-bottom type="number" min="1" max="100" step="0.1" value="${range ? range.bottom.toFixed(1) : 100}" aria-label="${page.page}쪽 아래쪽 범위 퍼센트"></label></div></div><div class="pdf-canvas-wrap"></div><p class="pdf-page-selected">위쪽과 아래쪽 범위 사이만 본문으로 저장됩니다</p>`;
-    element.querySelector('.pdf-canvas-wrap').append(page.canvas); $('pdf-pages').append(element);
-  }
-  $('pdf-message').textContent = suggestion.warning;
-  $('build-body').hidden = false; current.sourceReference = file.name + ' · 관리자가 선택한 본문 범위';
-  const guessYear = file.name.match(/(20\d{2})년도/); if (guessYear) $('notice-year').value = guessYear[1];
-  if (!$('notice-full-title').value) $('notice-full-title').value = file.name.replace(/\.pdf$/i, '').replace(/^\d+\.\s*/, '');
-  if (!$('notice-title').value) $('notice-title').value = file.name.replace(/\.pdf$/i, '').match(/\(([^)]+)\)/)?.[1] || '새 연구과제 공모';
-  markChanged();
-  if (suggestion.ranges.length) await buildBody();
-  message(suggestion.ranges.length ? '본문 범위를 추천했습니다. 위·아래 경계와 문의처 표의 마지막 행을 확인해 주세요.' : suggestion.warning);
-}
-function selectedRanges() {
-  return [...$('pdf-pages').querySelectorAll('[data-page]')].filter(el => el.querySelector('[data-include]').checked).map(el => ({ page: Number(el.dataset.page), top: Number(el.querySelector('[data-top]').value), bottom: Number(el.querySelector('[data-bottom]').value) }));
-}
-async function buildBody() {
-  const ranges = selectedRanges(); C.validateRanges(ranges);
-  current.bodyImages?.forEach(image => files.delete(image.href));
-  const images = [];
-  const stamp = crypto.randomUUID().slice(0, 8);
-  for (const range of ranges) {
-    const page = pages.find(p => p.page === range.page);
-    const top = Math.floor(page.height * range.top / 100), bottom = Math.ceil(page.height * range.bottom / 100);
-    const crop = document.createElement('canvas'); crop.width = page.width; crop.height = bottom - top;
-    crop.getContext('2d').drawImage(page.canvas, 0, top, page.width, crop.height, 0, 0, page.width, crop.height);
-    const blob = await new Promise(resolve => crop.toBlob(resolve, 'image/webp', .97));
-    if (!blob) throw new Error('본문 이미지를 만들지 못했습니다. 범위를 확인해 주세요.');
-    const ext = blob.type === 'image/webp' ? 'webp' : 'png';
-    const path = `files/${Number($('notice-year').value)}/${current.id}/body-${stamp}-${String(range.page).padStart(2,'0')}.${ext}`;
-    files.set(path, { path, blob });
-    images.push({ href: path, page: range.page, width: crop.width, height: crop.height, alt: `${$('notice-title').value || '공모 안내'} 본문 ${range.page}쪽` });
-  }
-  current.bodyImages = images; current.selectedRanges = ranges; rangesDirty = false;
-  $('body-text').value = C.textForRanges(pages, ranges); markChanged(); renderBody(); message('선택한 범위로 본문 미리보기를 만들었습니다.');
-}
 function collect(validate) {
-  if (validate && rangesDirty) throw new Error('본문 범위가 변경되었습니다. 선택 범위로 본문 미리보기를 다시 만들어 주세요.');
   const notice = structuredClone(current);
   notice.year = Number($('notice-year').value); notice.title = $('notice-title').value.trim(); notice.fullTitle = $('notice-full-title').value.trim() || notice.title; notice.family = $('notice-family').value.trim();
-  const english = { title: $('notice-english-title').value.trim(), summary: $('notice-english-summary').value.trim(), bodyText: $('notice-english-body').value.trim() };
-  if (Object.values(english).some(Boolean)) notice.english = { ...notice.english, ...english }; else delete notice.english;
-  notice.bodyText = $('body-text').value; notice.summary = `${notice.year}년도 ${notice.title} 공모 안내입니다.`;
+  notice.callRound = Number($('notice-call-round').value) || null;
+  if (notice.callRound) notice.round = `${notice.callRound}차 신규과제`;
+  const english = { title: $('notice-english-title').value.trim(), summary: $('notice-english-summary').value.trim(), officialBodyMarkdown: $('notice-english-official-body').value.trim(), bodyText: $('notice-english-body').value.trim() };
+  const sourceUrl = $('english-source-url').value.trim();
+  if (validate && $('english-source-reviewed').checked && !T.nrfUrl(sourceUrl)) throw new Error('공식 영문 출처는 eng.nrf.re.kr의 공고 주소여야 합니다.');
+  const englishSource = T.checkedSource({ kind: 'nrf-official', url: sourceUrl, title: $('english-source-title').value, year: notice.year, callRound: notice.callRound, reviewed: $('english-source-reviewed').checked }, notice);
+  if (validate && $('english-source-reviewed').checked && !englishSource) throw new Error('재단 영문 출처의 사업연도와 공모 차수를 확인해 주세요.');
+  if (validate && english.officialBodyMarkdown && !englishSource) throw new Error('재단 영문 본문은 출처 주소와 사업연도·차수·유형을 대조한 뒤 확인란을 선택해 주세요.');
+  if (Object.values(english).some(Boolean)) notice.english = { ...notice.english, ...english, source: englishSource }; else delete notice.english;
+  notice.bodyMarkdown = $('body-text').value.trim();
+  if (notice.bodyMarkdown) { notice.bodyImages = []; delete notice.selectedRanges; notice.sourceReference = notice.sourceReference || '관리자가 검토한 본문 텍스트'; }
+  notice.bodyText = notice.bodyMarkdown; notice.summary = `${notice.year}년도 ${notice.title} 공모 안내입니다.`;
   notice.types = notice.types?.length ? notice.types : [notice.family];
   notice.schedules = [...$('schedule-list').querySelectorAll('.schedule-row')].map(row => {
     const value = {};
@@ -236,7 +202,7 @@ async function preparePublish() {
   if (remote.head !== expectedHead) throw new Error('다른 변경이 있습니다. 임시보관 후 GitHub 최신 목록을 다시 불러와 주세요.');
   const merged = C.mergeNotice(C.parseCatalog(remote.script), notice), pendingFiles = await getPendingFiles(notice);
   prepared = { notice, data: merged, files: pendingFiles, expectedHead };
-  $('publish-summary').innerHTML = `<p><strong>${e(notice.title)}</strong> · ${notice.year}년도</p><p class="panel-help">선택 본문 ${notice.bodyImages.length}개 · 첨부 ${notice.attachments.length}개 · 이번 전송 파일 ${pendingFiles.length}개<br>기존 공고를 포함해 총 ${merged.notices.length}건을 보존합니다. 원본 PDF는 별도 첨부로 선택한 경우에만 포함됩니다.</p>`;
+  $('publish-summary').innerHTML = `<p><strong>${e(notice.title)}</strong> · ${notice.year}년도</p><p class="panel-help">본문 ${notice.bodyMarkdown ? '텍스트' : '기존 이미지 ' + notice.bodyImages.length + '개'} · 첨부 ${notice.attachments.length}개 · 이번 전송 파일 ${pendingFiles.length}개<br>기존 공고를 포함해 총 ${merged.notices.length}건을 보존합니다. 원본 PDF는 별도 첨부로 선택한 경우에만 포함됩니다.</p>`;
   $('publish-approved').checked = false; $('publish-confirm').hidden = false; $('publish-confirm').scrollIntoView({ block: 'center' });
 }
 async function publish() {
@@ -251,9 +217,9 @@ async function publish() {
   message('GitHub 저장 완료 · 공개 사이트 자동 배포를 기다리고 있습니다. 배포 상태 확인에서 성공 여부를 확인한 뒤 공개 사이트를 열어 주세요.');
   const link = document.createElement('a'); link.href = result.url; link.className = 'text-link'; link.textContent = ' 저장 내역 보기'; link.target = '_blank'; link.rel = 'noopener noreferrer'; $('status').append(link);
 }
-$('pdf-file').addEventListener('change', () => guarded(async () => { const file = $('pdf-file').files[0]; if (file) await readPdf(file); }));
-$('build-body').addEventListener('click', () => guarded(buildBody));
-$('pdf-pages').addEventListener('input', () => { rangesDirty = true; markChanged(); });
+$('body-import').addEventListener('change', () => guarded(importBody));
+$('english-body-import').addEventListener('change', () => guarded(importEnglishBody));
+$('match-nrf').addEventListener('click', findNrf);
 $('body-reviewed').addEventListener('change', () => { prepared = null; $('publish-confirm').hidden = true; });
 $('add-schedule').addEventListener('click', () => { scheduleRow(); markChanged(); });
 $('new-notice').addEventListener('click', () => guarded(async () => { if (hasChanges) await saveLocal(false); newNotice(); }));
@@ -275,7 +241,9 @@ $('attachment-files').addEventListener('change', () => guarded(async () => {
   }
   $('attachment-files').value = ''; markChanged(); renderAttachments(); message(`${selected.length}개 첨부파일을 준비했습니다. 아직 공개되지 않았습니다. 파일 목록과 본문을 확인한 뒤 공개 사이트에 적용을 눌러 주세요.`);
 }));
-for (const id of ['notice-year','notice-family','notice-title','notice-full-title','body-text','schedule-list','schedule-reviewed','notice-english-title','notice-english-summary','notice-english-body']) $(id).addEventListener('input', markChanged);
+for (const id of ['notice-year','notice-call-round','notice-family','notice-title','notice-full-title','body-text','schedule-list','schedule-reviewed','notice-english-title','notice-english-summary','notice-english-official-body','notice-english-body','english-source-url','english-source-title','english-source-reviewed']) $(id).addEventListener('input', markChanged);
+for (const id of ['notice-year','notice-call-round','notice-family','notice-title','notice-english-title','notice-english-summary','notice-english-official-body','english-source-url','english-source-title']) $(id).addEventListener('input', clearSourceReview);
+$('body-text').addEventListener('input', () => { markChanged(); renderBody(); });
 window.addEventListener('beforeunload', event => { if (hasChanges) { event.preventDefault(); event.returnValue = ''; } });
 newNotice(); await refreshDrafts();
 

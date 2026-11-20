@@ -11,6 +11,12 @@
       "version": "3.10.1",
       "license": "MIT OR GPL-3.0-or-later",
       "source": "existing Codex bundled runtime; MIT selected"
+    },
+    {
+      "name": "markdown-it",
+      "version": "14.3.3",
+      "license": "MIT",
+      "source": "kordoc pinned dependency; npm package browser bundle"
     }
   ],
   "files": {
@@ -213,6 +219,8 @@
     "pdfjs/wasm/LICENSE_QCMS": "36d847ae882f6574ebc72f56a4f354e4f104fde4a584373496482e97d52d31bc",
     "pdfjs/wasm/openjpeg.wasm": "67b8e2b162da472e98cb48d3d32e3e38fff481b9b32ff4818e78bb248af88ab2",
     "pdfjs/wasm/openjpeg_nowasm_fallback.js": "07c3c3361827308741bc31c561b59e705ebb4d1e8efb84e4d24884e230dbb894",
-    "pdfjs/wasm/qcms_bg.wasm": "6017eca5939cde1836e88e6d8cd27ae039246f206515ea4487bdfd0e3fb16e26"
+    "pdfjs/wasm/qcms_bg.wasm": "6017eca5939cde1836e88e6d8cd27ae039246f206515ea4487bdfd0e3fb16e26",
+    "markdown-it/LICENSE": "792c48c5a849a15fdf9e37e8bcf9e6d1dd13b32b46c642a748a0a46a9919d473",
+    "markdown-it/markdown-it.min.js": "494ba53db1aac9f676317dda7062bd9545b5f0bbe3f12b0ab1ab4f813825cfb0"
   }
 }

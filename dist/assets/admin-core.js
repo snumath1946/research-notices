@@ -42,7 +42,7 @@
     if (!draft || !/^[a-z0-9-]+$/.test(draft.id || '')) throw new Error('공고 식별자를 확인해 주세요.');
     if (!draft.title?.trim() || !draft.family?.trim()) throw new Error('공고명과 연구유형을 입력해 주세요.');
     if (!Number.isInteger(draft.year) || draft.year < 2000 || draft.year > 2200) throw new Error('사업연도를 확인해 주세요.');
-    if (!draft.bodyImages?.length) throw new Error('PDF에서 본문 범위를 선택하고 미리보기를 만들어 주세요.');
+    if (!(draft.bodyMarkdown || draft.bodyText || '').trim() && !draft.bodyImages?.length) throw new Error('공문을 변환한 본문 텍스트를 불러오거나 입력해 주세요.');
     if (!draft.reviewed) throw new Error('표시할 본문과 첨부파일을 확인한 후 확인란을 선택해 주세요.');
     return true;
   }
