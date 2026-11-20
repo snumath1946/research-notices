@@ -14,9 +14,11 @@ check(/href="#main"/.test(html), '본문 건너뛰기');
 const adminHtml = fs.readFileSync(path.join(root, 'admin.html'), 'utf8');
 for (const match of (html + adminHtml).matchAll(/(?:src|href)="([^"#]+)"/g)) {
   if (/^(https:|mailto:)/.test(match[1])) continue;
-  check(fs.existsSync(path.join(root, match[1])), '없는 정적 파일: ' + match[1]);
+  const resource = match[1].split(/[?#]/)[0];
+  if (!resource) continue;
+  check(fs.existsSync(path.join(root, resource)), '없는 정적 파일: ' + match[1]);
 }
-for (const file of ['assets/model.js', 'assets/app.js', 'assets/admin-core.js', 'assets/github-store.js', 'assets/draft-store.js', 'data/notices.js']) {
+for (const file of ['assets/model.js', 'assets/i18n.js', 'assets/app.js', 'assets/admin-core.js', 'assets/github-store.js', 'assets/draft-store.js', 'data/notices.js']) {
   new vm.Script(fs.readFileSync(path.join(root, file), 'utf8'), { filename: file });
   checks++;
 }
@@ -63,3 +65,4 @@ for (const [name, hash] of Object.entries(manifest.files)) {
 }
 console.log(`PASS: ${checks} checks; ${data.notices.length} notices; ${ready} available attachments; ${pending} pending attachments.`);
 console.log(`LIMIT: source PDFs unavailable; ${data.notices.filter(n => n.bodyImages?.length).length} notices use user-supplied body captures. Live GitHub writes are not tested.`);
+

@@ -58,6 +58,9 @@ function openNotice(value, savedFiles = []) {
   baseSignature = JSON.stringify(catalog.notices.find(n => n.id === current.id) || null);
   $('notice-title').value = current.title || '';
   $('notice-full-title').value = current.fullTitle || '';
+  $('notice-english-title').value = current.english?.title || '';
+  $('notice-english-summary').value = current.english?.summary || '';
+  $('notice-english-body').value = current.english?.bodyText || '';
   $('notice-family').value = current.family || '';
   $('notice-year').value = current.year;
   $('body-text').value = current.bodyText || '';
@@ -163,6 +166,8 @@ function collect(validate) {
   if (validate && rangesDirty) throw new Error('본문 범위가 변경되었습니다. 선택 범위로 본문 미리보기를 다시 만들어 주세요.');
   const notice = structuredClone(current);
   notice.year = Number($('notice-year').value); notice.title = $('notice-title').value.trim(); notice.fullTitle = $('notice-full-title').value.trim() || notice.title; notice.family = $('notice-family').value.trim();
+  const english = { title: $('notice-english-title').value.trim(), summary: $('notice-english-summary').value.trim(), bodyText: $('notice-english-body').value.trim() };
+  if (Object.values(english).some(Boolean)) notice.english = { ...notice.english, ...english }; else delete notice.english;
   notice.bodyText = $('body-text').value; notice.summary = `${notice.year}년도 ${notice.title} 공모 안내입니다.`;
   notice.types = notice.types?.length ? notice.types : [notice.family];
   notice.schedules = [...$('schedule-list').querySelectorAll('.schedule-row')].map(row => {
@@ -270,7 +275,7 @@ $('attachment-files').addEventListener('change', () => guarded(async () => {
   }
   $('attachment-files').value = ''; markChanged(); renderAttachments(); message(`${selected.length}개 첨부파일을 준비했습니다. 아직 공개되지 않았습니다. 파일 목록과 본문을 확인한 뒤 공개 사이트에 적용을 눌러 주세요.`);
 }));
-for (const id of ['notice-year','notice-family','notice-title','notice-full-title','body-text','schedule-list','schedule-reviewed']) $(id).addEventListener('input', markChanged);
+for (const id of ['notice-year','notice-family','notice-title','notice-full-title','body-text','schedule-list','schedule-reviewed','notice-english-title','notice-english-summary','notice-english-body']) $(id).addEventListener('input', markChanged);
 window.addEventListener('beforeunload', event => { if (hasChanges) { event.preventDefault(); event.returnValue = ''; } });
 newNotice(); await refreshDrafts();
 

@@ -1,12 +1,24 @@
 (function () {
   'use strict';
-  const data = window.ResearchNoticesData;
-  const M = window.ResearchNoticesModel;
+  const I = window.ResearchNoticesI18n;
+  const lang = I.language(location.search), english = lang === 'en';
+  const data = { ...window.ResearchNoticesData, notices: window.ResearchNoticesData.notices.map(n => I.notice(n, lang)) };
+  const M = I.model(window.ResearchNoticesModel, lang);
+  document.documentElement.lang = lang;
   const main = document.getElementById('main');
   let lastListHash = '#/';
   let currentOptions = {};
   let archiveMode = false;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const languageLink = document.getElementById('language-toggle');
+  function updateLanguageLink() { languageLink.href = I.languageUrl(location.href, english ? 'ko' : 'en'); }
+  languageLink.textContent = english ? '한국어' : 'English'; languageLink.lang = english ? 'ko' : 'en';
+  languageLink.setAttribute('aria-label', english ? '한국어로 보기' : 'View in English'); updateLanguageLink();
+  if (english) {
+    document.getElementById('language-note').hidden = false;
+    document.querySelector('meta[name="description"]').content = 'Research funding opportunities for faculty at the Department of Mathematical Sciences, Seoul National University. View funding calls, dates and application guidance.';
+    I.translateDOM(document.body);
+  }
   document.querySelector('.skip-link').addEventListener('click', event => {
     event.preventDefault();
     main.focus();
@@ -89,6 +101,7 @@
     }
     const hash = '#/' + (archiveMode ? 'archive' : '') + (params.size ? '?' + params.toString() : '');
     history.replaceState(null, '', hash);
+    updateLanguageLink();
     lastListHash = hash;
     renderResults();
   }
@@ -111,6 +124,7 @@
       updateFilters();
       document.getElementById('notice-search').focus();
     });
+    if (english) { I.translateDOM(results); I.translateDOM(document.getElementById('result-count')); }
   }
   function renderDetail(id) {
     const n = data.notices.find(item => item.id === id);
@@ -137,8 +151,9 @@
       const href = imageHref(item);
       return href ? `<figure class="notice-body-figure"><img src="${esc(href)}" alt="${esc(item.alt || n.title + ' 공문 본문 ' + (index + 1))}"${item.width && item.height ? ` width="${Number(item.width)}" height="${Number(item.height)}"` : ''}${index ? ' loading="lazy"' : ''}></figure>` : '';
     }).join('');
+    const overview = english ? `<section class="english-overview" aria-labelledby="english-overview-heading"><h2 id="english-overview-heading">English overview</h2><p>${esc(n.summary)}</p><dl class="facts"><div><dt>Funding program</dt><dd>${esc(n.program)}</dd></div><div><dt>Funding types</dt><dd>${esc(n.types.join(' · '))}</dd></div></dl><h3>Application schedule</h3>${n.contentStatus === 'verified' && n.schedules.length ? n.schedules.map(s => `<div class="schedule-entry"><h4>${esc(s.label)}</h4><p>Researcher applications: ${esc(M.formatKst(s.researcherStart))} – ${esc(M.formatKst(s.researcherEnd))}</p><p>Institutional approval deadline: ${esc(M.formatKst(s.institutionEnd))}</p></div>`).join('') : '<p>Application dates have not yet been verified. Please check the Korean notice.</p>'}${n.english?.bodyText ? `<h3>Additional guidance in English</h3><p class="translated-body">${esc(n.english.bodyText)}</p>` : ''}<p class="list-footnote">English guidance is provided for convenience. The original Korean notice and attachments remain the authoritative source.</p></section>` : '';
     const attachments = n.attachments || [];
-    main.innerHTML = `<div class="container"><nav class="breadcrumb" aria-label="현재 위치"><a href="${esc(lastListHash)}">공모 목록</a><span aria-hidden="true">/</span><span>${n.year}년도</span><span aria-hidden="true">/</span><span>${esc(n.title)}</span></nav><header class="detail-heading"><div class="tagline"><span>${n.year}년도 · ${esc(n.round)}</span>${status(n)}</div><h1>${esc(n.fullTitle)}</h1><p class="detail-meta">공모기관 ${esc(n.agency)} · 안내 경유 ${esc(n.via)}</p></header><div class="workspace detail-layout"><article aria-label="공모 상세 안내"><section class="notice-body-section"><h2>공문 본문</h2><p class="list-footnote">사업내용 · 신청기간 · 제출서류 · 신청방법 · 유의사항 · 문의처</p><div class="notice-body-images">${images}</div>${n.bodyText ? `<details class="notice-body-text"><summary>본문 텍스트로 보기</summary><div>${esc(n.bodyText)}</div></details>` : ''}</section><section class="detail-section"><h2>신청서류 및 첨부자료</h2>${attachments.length ? `<ul class="attachment-list">${attachments.map(a => { const href = M.getAttachmentHref(a); return `<li class="attachment-row"><span class="file-symbol" aria-hidden="true">${esc(a.format)}</span><div class="file-description"><p class="file-label">${esc(a.label || a.filename)}</p><p class="file-name">${esc(a.filename)}</p></div>${href ? `<a class="button button-outline button-small" href="${esc(href)}" download>${icon('download')}다운로드<span class="sr-only"> ${esc(a.filename)}</span></a>` : '<span class="quiet">자료 준비 중</span>'}</li>`; }).join('')}</ul>` : '<p class="unconfirmed">아직 등록된 첨부파일이 없습니다. 담당자가 신청서류를 추가하면 이곳에서 다운로드할 수 있습니다.</p>'}</section><div class="detail-actions"><a class="button button-outline" href="${esc(lastListHash)}">공모 목록으로</a></div></article>${sidebar(n.title)}</div></div>`;
+    main.innerHTML = `<div class="container"><nav class="breadcrumb" aria-label="현재 위치"><a href="${esc(lastListHash)}">공모 목록</a><span aria-hidden="true">/</span><span>${n.year}년도</span><span aria-hidden="true">/</span><span>${esc(n.title)}</span></nav><header class="detail-heading"><div class="tagline"><span>${n.year}년도 · ${esc(n.round)}</span>${status(n)}</div><h1>${esc(n.fullTitle)}</h1><p class="detail-meta">공모기관 ${esc(n.agency)} · 안내 경유 ${esc(n.via)}</p></header><div class="workspace detail-layout"><article aria-label="공모 상세 안내">${overview}<section class="notice-body-section"><h2>공문 본문</h2><p class="list-footnote">사업내용 · 신청기간 · 제출서류 · 신청방법 · 유의사항 · 문의처</p><div class="notice-body-images" lang="ko" data-preserve-language>${images}</div>${n.bodyText ? `<details class="notice-body-text"><summary>본문 텍스트로 보기</summary><div lang="ko" data-preserve-language>${esc(n.bodyText)}</div></details>` : ''}</section><section class="detail-section"><h2>신청서류 및 첨부자료</h2>${attachments.length ? `<ul class="attachment-list">${attachments.map(a => { const href = M.getAttachmentHref(a); return `<li class="attachment-row"><span class="file-symbol" aria-hidden="true">${esc(a.format)}</span><div class="file-description"><p class="file-label">${esc(a.label || a.filename)}</p><p class="file-name">${esc(a.filename)}</p></div>${href ? `<a class="button button-outline button-small" href="${esc(href)}" download>${icon('download')}다운로드<span class="sr-only"> ${esc(a.filename)}</span></a>` : '<span class="quiet">자료 준비 중</span>'}</li>`; }).join('')}</ul>` : '<p class="unconfirmed">아직 등록된 첨부파일이 없습니다. 담당자가 신청서류를 추가하면 이곳에서 다운로드할 수 있습니다.</p>'}</section><div class="detail-actions"><a class="button button-outline" href="${esc(lastListHash)}">공모 목록으로</a></div></article>${sidebar(n.title)}</div></div>`;
   }
   function renderGuide() {
     document.title = '신청 전 확인 | 연구과제 공모 안내';
@@ -166,6 +181,8 @@
       if (el.dataset.nav === nav) el.setAttribute('aria-current', 'page');
       else el.removeAttribute('aria-current');
     });
+    if (english) { I.translateDOM(main); document.title = I.text(document.title); }
+    updateLanguageLink();
     if (!initial) { window.scrollTo(0, 0); main.focus({ preventScroll: true }); }
   }
   window.addEventListener('hashchange', () => route());
