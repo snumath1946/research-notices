@@ -2,10 +2,10 @@ name: Validate portable converter and admin
 
 on:
   pull_request:
-    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.github/workflows/validate.yml']
+    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.gitattributes', '.github/workflows/validate.yml']
   push:
     branches: [main]
-    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.github/workflows/validate.yml']
+    paths: ['dist/**', 'scripts/**', 'tests/**', 'package*.json', 'start-converter.*', '.gitattributes', '.github/workflows/validate.yml']
   workflow_dispatch:
 
 permissions:
