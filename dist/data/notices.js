@@ -135,20 +135,30 @@ const data = /* CATALOG_JSON_START */
           "institutionEnd": "2026-12-10T13:00:00+09:00"
         }
       ],
-      "summary": "2027년도 개인기초연구사업 한우물파기 기초연구의 1차 신규과제 공모 안내입니다.",
+      "summary": "2027년도 한우물파기 기초연구 공모 안내입니다.",
       "eligibility": null,
       "funding": null,
       "duration": null,
       "details": [],
       "sourceReference": "Cap 2026-11-20 09-44-17.jpg · 사용자 제공 본문 캡처",
-      "attachments": [],
+      "attachments": [
+        {
+          "label": "3. 2027년도 개인기초연구사업 1차 신규과제 공모 안내(한우물파기 기초연구).zip",
+          "filename": "3. 2027년도 개인기초연구사업 1차 신규과제 공모 안내(한우물파기 기초연구).zip",
+          "format": "ZIP",
+          "href": "files\u002f2027\u002f2027-deep-focus-r1\u002fattachments\u002f3fd2634527b7c53c23a82e32.zip",
+          "available": true,
+          "size": 24431488
+        }
+      ],
       "bodyImages": [
         {
           "href": "files\u002f2027\u002f2027-deep-focus-r1\u002fbody-01.jpg",
           "alt": "한우물파기 기초연구: 사업내용부터 문의처까지의 공문 본문"
         }
       ],
-      "bodyText": ""
+      "bodyText": "",
+      "updatedAt": "2026-11-20T05:43:42.721Z"
     },
     {
       "id": "2027-core-r1",
