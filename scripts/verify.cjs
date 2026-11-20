@@ -37,7 +37,8 @@ for (const notice of data.notices) {
     for (const schedule of notice.schedules) check(model.scheduleState(schedule, new Date()).key !== 'unverified', '올바른 시각 및 시간대');
   } else check(model.getStatus(notice).key === 'unverified', '미확인 일정 판정');
   check(Array.isArray(notice.attachments), '첨부자료 목록');
-  for (const image of notice.bodyImages || []) {
+  check(!!notice.bodyMarkdown?.trim() || !!notice.bodyImages?.length, '게시할 본문 존재');
+  for (const image of [...(notice.bodyImages || []), ...(notice.legacyBodyImages || [])]) {
     const href = model.getAttachmentHref({ ...image, available: true });
     check(!!href && fs.existsSync(path.join(root, href)), '게시할 본문 이미지 존재');
   }
@@ -64,5 +65,5 @@ for (const [name, hash] of Object.entries(manifest.files)) {
   check(crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'vendor', name))).digest('hex') === hash, '동봉 라이브러리 무결성');
 }
 console.log(`PASS: ${checks} checks; ${data.notices.length} notices; ${ready} available attachments; ${pending} pending attachments.`);
-console.log(`LIMIT: source PDFs unavailable; ${data.notices.filter(n => n.bodyImages?.length).length} notices use user-supplied body captures. Live GitHub writes are not tested.`);
+console.log(`INFO: ${data.notices.filter(n => n.bodyMarkdown?.trim()).length} text notices; ${data.notices.filter(n => n.legacyBodyImages?.length).length} original captures retained. Live admin GitHub writes are not tested.`);
 
