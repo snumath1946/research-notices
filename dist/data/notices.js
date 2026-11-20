@@ -86,20 +86,30 @@ const data = /* CATALOG_JSON_START */
           "institutionEnd": "2026-12-10T13:00:00+09:00"
         }
       ],
-      "summary": "2027년도 개인기초연구사업 신진연구 유형 B·유형 A의 1차 신규과제 공모 안내입니다.",
+      "summary": "2027년도 신진연구 공모 안내입니다.",
       "eligibility": null,
       "funding": null,
       "duration": null,
       "details": [],
       "sourceReference": "Cap 2026-11-20 09-43-56.jpg · 사용자 제공 본문 캡처",
-      "attachments": [],
+      "attachments": [
+        {
+          "label": "2. 2027년도 개인기초연구사업신규 1차 신규과제 공모 안내(신진연구 유형B, 유형A).zip",
+          "filename": "2. 2027년도 개인기초연구사업신규 1차 신규과제 공모 안내(신진연구 유형B, 유형A).zip",
+          "format": "ZIP",
+          "href": "files\u002f2027\u002f2027-early-career-r1\u002fattachments\u002fa17baa23db2d85f1072404b3.zip",
+          "available": true,
+          "size": 25259311
+        }
+      ],
       "bodyImages": [
         {
           "href": "files\u002f2027\u002f2027-early-career-r1\u002fbody-01.jpg",
           "alt": "신진연구: 사업내용부터 문의처까지의 공문 본문"
         }
       ],
-      "bodyText": ""
+      "bodyText": "",
+      "updatedAt": "2026-11-20T05:43:00.816Z"
     },
     {
       "id": "2027-deep-focus-r1",
