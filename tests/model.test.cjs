@@ -6,13 +6,19 @@ const data = require('../dist/data/notices.js');
 const schedule = { label: '유형 A', researcherStart: '2026-11-20T09:00:00+09:00', researcherEnd: '2026-12-04T18:00:00+09:00', institutionEnd: '2026-12-07T18:00:00+09:00' };
 const verified = { id: 'sample', year: 2027, contentStatus: 'verified', schedules: [schedule] };
 
-test('제공된 공고 4건의 본문 캡처와 캡처에서 확인한 신청기간을 보존한다', () => {
+test('기존 공고 4건을 kordoc 텍스트로 표시하며 원본 이미지와 신청기간을 보존한다', () => {
   assert.equal(data.notices.length, 4);
   for (const notice of data.notices) {
     assert.equal(notice.year, 2027);
     assert.equal(model.getStatus(notice, new Date('2026-11-20T12:00:00+09:00')).key, 'upcoming');
     assert.equal(notice.schedules.length, 1);
-    assert.equal(notice.bodyImages.length, 1);
+    assert.equal(notice.bodyImages.length, 0);
+    assert.equal(notice.legacyBodyImages.length, 1);
+    assert.equal(notice.extraction.engine, 'kordoc');
+    assert.ok(notice.bodyMarkdown.length > 500);
+    assert.equal(notice.bodyText, notice.bodyMarkdown);
+    for (const heading of ['사업내용','신청기간','제출서류','신청방법','유의사항','문의처']) assert.ok(notice.bodyMarkdown.includes(heading));
+    assert.doesNotMatch(notice.bodyMarkdown, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|01[016789][ -]?\d{3,4}[ -]?\d{4}/i);
   }
 });
 

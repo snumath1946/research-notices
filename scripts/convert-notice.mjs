@@ -12,7 +12,7 @@ process.env.KORDOC_OFFLINE = '1';
 const { parse } = await import('kordoc');
 export async function convertPdf(bytes) {
   if (!bytes.length || bytes.length > MAX_FILE || !bytes.subarray(0, 1024).includes(Buffer.from('%PDF-'))) throw new Error('25MB 이하의 PDF 공문을 선택해 주세요.');
-  const result = await parse(bytes, { images: false, ocr: false, tableFormat: 'gfm' });
+  const result = await parse(bytes, { images: false, ocr: false, plain: true, tableFormat: 'gfm' });
   if (!result.success) throw new Error('PDF의 텍스트를 읽지 못했습니다. 암호와 파일 형식을 확인해 주세요.');
   if (!result.markdown.trim()) throw new Error('텍스트가 없는 스캔본입니다. 텍스트가 포함된 원본 PDF가 필요합니다.');
   const selected = T.selectBody(result.markdown);
