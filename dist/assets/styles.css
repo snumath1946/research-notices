@@ -260,3 +260,32 @@ ul { margin: 0; padding: 0; list-style: none; }
   .notice-row, .attachment-row, .facts > div { break-inside: avoid; }
   a { color: var(--ink); }
 }
+
+.utility-actions { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.language-toggle { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: 4px; white-space: nowrap; font-size: .9375rem; }
+.language-note { padding-block: 16px; font-size: .9375rem; color: var(--secondary); border-bottom: 1px solid var(--line); }
+.english-overview { padding: 24px; background: var(--navy-soft); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 32px; }
+.english-overview h2 { font-size: 1.25rem; margin-bottom: 16px; }
+.english-overview h3 { font-size: 1.125rem; margin-top: 24px; margin-bottom: 12px; }
+.english-overview h4 { font-size: 1rem; margin-bottom: 8px; }
+.english-overview > p { margin-bottom: 20px; }
+.translated-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+html[lang="en"] { word-break: normal; overflow-wrap: anywhere; }
+html[lang="en"] .header-inner { flex-wrap: wrap; padding-block: 20px; gap: 16px 24px; }
+html[lang="en"] .brand-name { max-width: 290px; }
+html[lang="en"] .notice-date .status { white-space: normal; }
+html[lang="en"] .list-columns, html[lang="en"] .notice-link { grid-template-columns: minmax(0,1fr) 168px 104px; }
+[hidden] { display: none !important; }
+@media (max-width: 680px) {
+  .utility-inner { flex-wrap: wrap; padding-block: 4px; }
+  .utility-actions { gap: 12px; margin-left: auto; }
+  html[lang="en"] .utility-inner > span:first-child { max-width: 60%; }
+  html[lang="en"] .brand { width: 100%; flex-wrap: wrap; gap: 8px 12px; }
+  html[lang="en"] .brand-name { max-width: none; }
+  html[lang="en"] .main-nav { flex-wrap: wrap; gap: 4px 20px; }
+  html[lang="en"] .hero h1 { font-size: clamp(1.8rem, 7vw, 2.25rem); }
+  html[lang="en"] .notice-link { grid-template-columns: minmax(0,1fr); }
+  html[lang="en"] .year-number { font-size: 3.25rem; }
+  .english-overview { padding: 20px 16px; }
+}
+@media print { .language-toggle, .language-note { display: none !important; } }
