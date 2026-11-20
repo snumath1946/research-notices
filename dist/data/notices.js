@@ -36,20 +36,30 @@ const data = /* CATALOG_JSON_START */
           "institutionEnd": "2026-12-10T13:00:00+09:00"
         }
       ],
-      "summary": "2027년도 기초연구사업 리더연구의 1차 신규과제 공모 안내입니다.",
+      "summary": "2027년도 리더연구 공모 안내입니다.",
       "eligibility": null,
       "funding": null,
       "duration": null,
       "details": [],
       "sourceReference": "Cap 2026-11-20 09-43-10.jpg · 사용자 제공 본문 캡처",
-      "attachments": [],
+      "attachments": [
+        {
+          "label": "1. 2027년도 기초연구사업 1차 신규과제 공모 안내(리더연구).zip",
+          "filename": "1. 2027년도 기초연구사업 1차 신규과제 공모 안내(리더연구).zip",
+          "format": "ZIP",
+          "href": "files\u002f2027\u002f2027-leader-r1\u002fattachments\u002ffafd9b810a9f91357c776a8b.zip",
+          "available": true,
+          "size": 24841445
+        }
+      ],
       "bodyImages": [
         {
           "href": "files\u002f2027\u002f2027-leader-r1\u002fbody-01.jpg",
           "alt": "리더연구: 사업내용부터 문의처까지의 공문 본문"
         }
       ],
-      "bodyText": ""
+      "bodyText": "",
+      "updatedAt": "2026-11-20T05:42:08.136Z"
     },
     {
       "id": "2027-early-career-r1",
